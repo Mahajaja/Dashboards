@@ -1,0 +1,15 @@
+[theme]
+# Color de las etiquetas de los filtros (lo que ahora ves rojo)
+primaryColor = "#2E7D32" 
+
+# Fondo de la barra lateral (Gris muy oscuro/Negro)
+secondaryBackgroundColor = "#121212"
+
+# Fondo de la página principal
+backgroundColor = "#0E1117"
+
+# Color del texto principal
+textColor = "#FFFFFF"
+
+# Fuente
+font = "sans serif"
