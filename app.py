@@ -21,7 +21,7 @@ st.set_page_config(
 )
 
 # CLAVE DE LA API PARA ANÁLISIS AI
-API_KEY = st.secrets["GEMINI_API_KEY"]
+API_KEY = "AIzaSyBi2wSRn_f7LMWZtojgbNFQR_b4M8oTI1o"
 client = genai.Client(api_key=API_KEY)
 
 # ESTRUCTURA DE ICONO Y TITULO
@@ -50,10 +50,10 @@ def create_card(icon, title, value):
 # --- 2. CARGA DE DATOS / CONEXIÓN SQL (CON CACHÉ) ---
 @st.cache_data(ttl=600)
 def cargar_datos():
-    server = st.secrets["DB_SERVER"]
-    user = st.secrets["DB_USER"]
-    password = st.secrets["DB_PASSWORD"]
-    database = st.secrets["DB_NAME"]
+    server = 'sql1001.site4now.net'
+    user = 'db_ab6a61_sgreengold_admin'
+    password = 'nR8A*aCh'
+    database = 'db_ab6a61_sgreengold'
 
     try:
         conn = pymssql.connect(server, user, password, database)
@@ -178,6 +178,33 @@ st.markdown("""
         margin-top: 30px !important;
     }
 
+    /* 🟢 CORRECCIÓN DE OPACIDAD: Forzamos la inyección visual en los botones primarios */
+    button[data-testid="baseButton-primary"] {
+        background-color: rgba(46, 125, 50, 0.20) !important; /* Fondo verde ultra tenue al 20% */
+        color: #A9DFBF !important; /* Texto en verde pastel claro de alta legibilidad */
+        border: 1px solid rgba(46, 125, 50, 0.4) !important; /* Borde suave traslúcido */
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    /* Hover sobre los botones tenues seleccionados */
+    button[data-testid="baseButton-primary"]:hover {
+        background-color: rgba(46, 125, 50, 0.40) !important; /* Se ilumina un poco más */
+        color: #FFFFFF !important;
+        border: 1px solid #2E7D32 !important;
+        box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3) !important;
+    }
+
+    /* Evitar que Streamlit altere el color interno del texto del botón primario */
+    button[data-testid="baseButton-primary"] p, 
+    button[data-testid="baseButton-primary"] div,
+    button[data-testid="baseButton-primary"] span {
+        color: #A9DFBF !important;
+    }
+    button[data-testid="baseButton-primary"]:hover p {
+        color: #FFFFFF !important;
+    }
+
     .metric-card {
         background-color: #121212;
         border-left: 5px solid #2E7D32;
@@ -227,6 +254,7 @@ st.markdown("""
     button[data-baseweb="tab"][aria-selected="true"] p {
         color: #FFD700 !important; /* Dorado corporativo para la pestaña seleccionada */
     }
+    
 </style>
 """, unsafe_allow_html=True)
 
@@ -328,7 +356,7 @@ fig_usuarios = go.Figure(go.Bar(
                   "🛠️ <b>No. Servicios:</b> %{x}<br>" +
                   "💰 <b>Gasto Total:</b> %{customdata:$,.0f}<extra></extra>"
 ))
-fig_usuarios.update_layout(template="plotly_dark", margin=dict(l=10, r=10, t=10, b=10))
+fig_usuarios.update_layout(title="📊 Top 10 Usuarios (Demanda y Gasto)",template="plotly_dark", margin=dict(l=10, r=10, t=50, b=10))
 
 # 2. Maquinaria
 from plotly.subplots import make_subplots 
@@ -336,14 +364,14 @@ maq_data = df_res.groupby('maquinaria').agg({'id_solicitud': 'count', 'costo_rep
 fig_maquinaria = make_subplots(specs=[[{"secondary_y": True}]])
 fig_maquinaria.add_trace(go.Bar(x=maq_data.index, y=maq_data['id_solicitud'], name="Servicios", marker_color='#A8DADC'), secondary_y=False)
 fig_maquinaria.add_trace(go.Scatter(x=maq_data.index, y=maq_data['costo_reparacion'], name="Gasto", line=dict(color='#E63946', width=3)), secondary_y=True)
-fig_maquinaria.update_layout(template="plotly_dark", hovermode="x unified", margin=dict(l=10, r=10, t=10, b=10))
+fig_maquinaria.update_layout(title="🚜 Maquinaria: Volumen vs Gasto Total",template="plotly_dark", hovermode="x unified", margin=dict(l=10, r=10, t=50, b=10))
 
 # 3. Histórico
 mes_data_plot = df_res.groupby(['mes_sort', 'mes_nombre']).agg({'id_solicitud': 'count', 'costo_reparacion': 'sum'}).reset_index()
 fig_historico = make_subplots(specs=[[{"secondary_y": True}]])
 fig_historico.add_trace(go.Bar(x=mes_data_plot['mes_nombre'], y=mes_data_plot['id_solicitud'], name="Servicios", marker_color='#A8DADC'), secondary_y=False)
 fig_historico.add_trace(go.Scatter(x=mes_data_plot['mes_nombre'], y=mes_data_plot['costo_reparacion'], name="Gasto", line=dict(color='#E63946', width=3)), secondary_y=True)
-fig_historico.update_layout(template="plotly_dark", hovermode="x unified")
+fig_historico.update_layout(title="📅 Histórico Mensual: Cantidad y Costos",template="plotly_dark", hovermode="x unified", margin=dict(l=10, r=10, t=50, b=10))
 
 # 4. Ubicaciones
 ubi_data = df_res.groupby('ubicación').agg({'id_solicitud': 'count', 'costo_reparacion': 'sum'}).nlargest(10, 'id_solicitud').sort_values('id_solicitud')
@@ -362,8 +390,8 @@ fig_ubicaciones.add_trace(go.Bar(
                   "🛠️ <b>No. Servicios:</b> %{x}<br>" +
                   "💰 <b>Gasto Total:</b> %{customdata:$,.0f}<extra></extra>"
 ))
-fig_ubicaciones.update_layout(
-    template="plotly_dark", margin=dict(l=20, r=100, t=20, b=20),
+fig_ubicaciones.update_layout(title="📍 Ubicaciones: Servicios y Gasto Total",
+    template="plotly_dark", margin=dict(l=20, r=100, t=50, b=20),
     xaxis=dict(title="Cantidad de Servicios", range=[0, ubi_data['id_solicitud'].max() * 1.25]), yaxis=dict(title="")
 )
 
@@ -384,7 +412,7 @@ fig_urgencia = go.Figure(go.Bar(
                   "🛠️ <b>No. Servicios:</b> %{y}<br>" +
                   "💰 <b>Gasto Total:</b> %{customdata:$,.0f}<extra></extra>"
 ))
-fig_urgencia.update_layout(template="plotly_dark")
+fig_urgencia.update_layout(title="🚨 Servicios por Grado de Urgencia",template="plotly_dark",margin=dict(l=20, r=100, t=50, b=20))
 
 # 6. Proveedores
 df_prov = df_res.copy()
@@ -408,7 +436,7 @@ fig_proveedores = go.Figure(go.Bar(
                   "🛠️ <b>No. Servicios:</b> %{x}<br>" +
                   "💰 <b>Gasto Total:</b> %{customdata:$,.0f}<extra></extra>"
 ))
-fig_proveedores.update_layout(template="plotly_dark", margin=dict(l=10, r=100, t=10, b=10), xaxis=dict(title="Cantidad de Servicios"))
+fig_proveedores.update_layout(title="🤝 Top 10 Proveedores Externos",template="plotly_dark", margin=dict(l=10, r=100, t=50, b=10), xaxis=dict(title="Cantidad de Servicios"))
 
 
 # ==========================================
@@ -430,32 +458,44 @@ with tab_operativo:
     with col_miniaturas:
         st.markdown("<h5 style='text-align: center; color: #FFFFF;'>📊 Selecciona una Gráfica</h5>", unsafe_allow_html=True)
         
-        if st.button("👥 Top Usuarios", use_container_width=True):
+        # BOTÓN: TOP USUARIOS
+        btn_usuarios_tipo = "primary" if "usuarios" in st.session_state['graficas_activas'] else "secondary"
+        if st.button("👥 Top Usuarios", use_container_width=True, type=btn_usuarios_tipo):
             if "usuarios" in st.session_state['graficas_activas']: st.session_state['graficas_activas'].remove("usuarios")
             else: st.session_state['graficas_activas'].append("usuarios")
             st.rerun()
 
-        if st.button("🚜 Maquinaria vs Gasto", use_container_width=True):
+        # BOTÓN: HISTÓRICO MENSUAL
+        btn_maq_tipo = "primary" if "maquinaria" in st.session_state['graficas_activas'] else "secondary"
+        if st.button("🚜 Maquinaria vs Gasto", use_container_width=True, type=btn_maq_tipo):
             if "maquinaria" in st.session_state['graficas_activas']: st.session_state['graficas_activas'].remove("maquinaria")
             else: st.session_state['graficas_activas'].append("maquinaria")
             st.rerun()
 
-        if st.button("📅 Histórico Mensual", use_container_width=True):
+        # BOTÓN: HISTÓRICO MENSUAL
+        btn_hist_tipo = "primary" if "historico" in st.session_state['graficas_activas'] else "secondary"
+        if st.button("📅 Histórico Mensual", use_container_width=True, type=btn_hist_tipo):
             if "historico" in st.session_state['graficas_activas']: st.session_state['graficas_activas'].remove("historico")
             else: st.session_state['graficas_activas'].append("historico")
             st.rerun()
 
-        if st.button("📍 Costo por Ubicación", use_container_width=True):
+        # BOTÓN: UBICACIONES
+        btn_ubi_tipo = "primary" if "ubicaciones" in st.session_state['graficas_activas'] else "secondary"
+        if st.button("📍 Costo por Ubicación", use_container_width=True, type=btn_ubi_tipo):
             if "ubicaciones" in st.session_state['graficas_activas']: st.session_state['graficas_activas'].remove("ubicaciones")
             else: st.session_state['graficas_activas'].append("ubicaciones")
             st.rerun()
 
-        if st.button("🚨 Costos por Urgencia", use_container_width=True):
+        # BOTÓN: URGENCIA
+        btn_urg_tipo = "primary" if "urgencia" in st.session_state['graficas_activas'] else "secondary"
+        if st.button("🚨 Costos por Urgencia", use_container_width=True, type=btn_urg_tipo):
             if "urgencia" in st.session_state['graficas_activas']: st.session_state['graficas_activas'].remove("urgencia")
             else: st.session_state['graficas_activas'].append("urgencia")
             st.rerun()
 
-        if st.button("🤝 Top Proveedores", use_container_width=True):
+        # BOTÓN: PROVEEDORES
+        btn_prov_tipo = "primary" if "proveedores" in st.session_state['graficas_activas'] else "secondary"
+        if st.button("🤝 Top Proveedores", use_container_width=True, type=btn_prov_tipo):
             if "proveedores" in st.session_state['graficas_activas']: st.session_state['graficas_activas'].remove("proveedores")
             else: st.session_state['graficas_activas'].append("proveedores")
             st.rerun()
