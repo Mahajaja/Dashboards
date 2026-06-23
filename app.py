@@ -6,6 +6,7 @@ from google import genai
 import json
 import matplotlib.pyplot as plt
 import pymssql
+import io
 
 #import warnings
 #from plotly.subplots import make_subplots
@@ -21,7 +22,7 @@ st.set_page_config(
 )
 
 # CLAVE DE LA API PARA ANÁLISIS AI
-API_KEY = st.secrets["GEMINI_API_KEY"]
+API_KEY = "AIzaSyBi2wSRn_f7LMWZtojgbNFQR_b4M8oTI1o"
 client = genai.Client(api_key=API_KEY)
 
 # ESTRUCTURA DE ICONO Y TITULO
@@ -50,10 +51,10 @@ def create_card(icon, title, value):
 # --- 2. CARGA DE DATOS / CONEXIÓN SQL (CON CACHÉ) ---
 @st.cache_data(ttl=600)
 def cargar_datos():
-    server = st.secrets["DB_SERVER"]
-    user = st.secrets["DB_USER"]
-    password = st.secrets["DB_PASSWORD"]
-    database = st.secrets["DB_NAME"]
+    server = 'sql1001.site4now.net'
+    user = 'db_ab6a61_sgreengold_admin'
+    password = 'nR8A*aCh'
+    database = 'db_ab6a61_sgreengold'
 
     try:
         conn = pymssql.connect(server, user, password, database)
@@ -311,6 +312,129 @@ df_res['prov_limpio'] = df_res['proveedor_reparacion'].astype(str).str.strip().s
 df_res['prov_limpio'] = df_res['prov_limpio'].map(mapeo_duplicados).fillna(df_res['prov_limpio'].str.title())
 
 
+# ===================================================
+# 💾 BOTÓN DE EXPORTACIÓN A EXCEL (REPORTES DINÁMICOS)
+# ===================================================
+
+st.sidebar.write("---")
+st.sidebar.markdown("### 📥 Reportes Ejecutivos")
+
+if not df_res.empty:
+    # 1. Creamos un buffer en memoria para simular el archivo de Excel sin guardarlo en el disco del servidor.
+    buffer = io.BytesIO()
+
+    # 1. Diccionario de mapeo: 'nombre_columna_sql' : 'Nombre Limpio para Excel'
+    # Ajusta los nombres del lado derecho según cómo quieras que se lean en tu reporte
+    diccionario_columnas = {
+        'id_solicitud': 'ID Solicitud',
+        'folio_solicitud': 'Folio',
+        'ubicación': 'Ubicación',
+        'reporta': 'Empleado Reporta',
+        'categoría': 'Categoría',
+        'maquinaria': 'No.Económico',
+        'horometro': 'Horometro',
+        'fecha_servicio': 'Fecha Reparación',
+        'fecha_entrega': 'Fecha Entrega',
+        'grado_urgencia': 'Grado de Urgencia',
+        'responsable': 'Responsable',
+        'costo_reparacion': 'Costo Aproximado',
+        'tipo_servicio': 'Tipo de Servicio',
+        'proveedor_reparacion': 'Reparado Por',
+        'descripcion_problema': 'Descripción del Problema',
+        'estatus': 'Estatus de la Solicitud'
+    } 
+
+    # 2. Copiamos y preparamos el DataFrame para la exportación.
+    columnas_deseadas = [
+        'id_solicitud',
+        'folio_solicitud',
+        'ubicación',
+        'reporta',
+        'categoría',
+        'maquinaria',
+        'horometro',
+        'fecha_servicio',
+        'fecha_entrega',
+        'grado_urgencia',
+        'responsable',
+        'costo_reparacion',
+        'tipo_servicio',
+        'proveedor_reparacion',
+        'descripcion_problema',
+        'estatus'
+    ]
+
+    df_export = df_res[columnas_deseadas].copy()
+
+    for col_fecha in ['fecha_servicio', 'fecha_entrega']:
+        if col_fecha in df_export.columns:
+            df_export[col_fecha] = pd.to_datetime(df_export[col_fecha], errors='coerce').dt.strftime('%d-%m-%Y')
+
+    df_export = df_export.rename(columns=diccionario_columnas)
+
+
+    # 3. Inicializamos el escritor de Excel de Pandas con XlsxWriter
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        df_export.to_excel(writer, sheet_name='Mantenimiento_Filtrado', index=False)
+
+        # --- APERTURA DEL MOTOR PARA ESTILOS ---
+        workbook = writer.book
+        worksheet = writer.sheets['Mantenimiento_Filtrado']
+
+        # Definimos el rango total de la tabla (desde la celda A1 hasta la última columna y fila)
+        max_row, max_col = df_export.shape
+        column_settings = [{'header': column} for column in df_export.columns]
+
+        # Aplicar formato (estilos) de tabla oficial
+        worksheet.add_table(0, 0, max_row, max_col - 1, {
+            'columns': column_settings,
+            'style': 'TableStyleMedium2', # Formato de tabla integrado de Excel
+            'banded_rows': True
+        })
+
+        # --- CONFIGURACIÓN DE ALINEACIONES Y FORMATOS ---
+        # 1. Creamos los estilos de alineación
+        formato_centro = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
+        formato_derecha = workbook.add_format({'align': 'right', 'valign': 'vcenter'})
+        formato_izquierda = workbook.add_format({'align': 'left', 'valign':'vcenter'})
+
+        formato_fecha = workbook.add_format({'num_format': 'dd-mm-yyyy', 'align': 'center', 'valign': 'vcenter'})
+
+        for i, col in enumerate(df_export.columns): 
+            # 🟢 CORRECCIÓN DE ANCHO SEGURA: Filtramos nulos antes de medir cadenas
+            valores_validos = df_export[col].dropna().astype(str)
+            
+            if not valores_validos.empty:
+                max_len = max(valores_validos.map(len).max(), len(str(col))) + 3
+            else:
+                max_len = len(str(col)) + 5 # Si está vacía la columna, hereda el tamaño del título
+
+            if max_len > 40: max_len = 40
+
+            col_original = columnas_deseadas[i]
+
+            if col_original in ['fecha_servicio', 'fecha_entrega']:
+                worksheet.set_column(i, i, max_len, formato_fecha)
+            
+            elif col_original in ['id_solicitud', 'folio_solicitud', 'ubicación', 'maquinaria', 'horometro', 'grado_urgencia', 'costo_reparacion', 'tipo_servicio', 'estatus']:
+                worksheet.set_column(i, i, max_len, formato_centro)
+            
+            elif col_original in ['reporta', 'categoría', 'responsable', 'proveedor_reparacion', 'descripcion_problema']:
+                worksheet.set_column(i, i, max_len, formato_izquierda)
+            else:
+                worksheet.set_column(i, i, max_len, formato_izquierda)
+
+    st.sidebar.download_button(
+        label="🟢 Descargar Reporte en Excel",
+        data=buffer.getvalue(),
+        file_name=f"Reporte_Mantenimiento_{df_res['año'].iloc[0] if 'año' in df_res.columns else '2026'}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True
+    )
+else:
+    st.sidebar.warning("⚠️ No hay datos seleccionados para exportar.")
+
+
 # --- MÉTRICAS PRINCIPALES (CARDS) ---
 col_m1, col_m2, col_m3, col_m4 = st.columns(4)
 
@@ -535,9 +659,6 @@ with tab_operativo:
 
 # ------------------------------------------
 # TAB 2: EL CEREBRO DE LA IA
-# ------------------------------------------
-# ------------------------------------------
-# TAB 2: EL CEREBRO DE LA IA (Estructura Horizontal)
 # ------------------------------------------
 with tab_ia:
     st.header("Análisis Principales Problemas Reportados")
