@@ -4,3 +4,4 @@ plotly
 google-genai
 pymssql
 matplotlib
+xlsxwriter
