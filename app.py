@@ -22,7 +22,7 @@ st.set_page_config(
 )
 
 # CLAVE DE LA API PARA ANÁLISIS AI
-API_KEY = "AIzaSyBi2wSRn_f7LMWZtojgbNFQR_b4M8oTI1o"
+API_KEY = st.secrets["GEMINI_API_KEY"]
 client = genai.Client(api_key=API_KEY)
 
 # ESTRUCTURA DE ICONO Y TITULO
@@ -51,10 +51,10 @@ def create_card(icon, title, value):
 # --- 2. CARGA DE DATOS / CONEXIÓN SQL (CON CACHÉ) ---
 @st.cache_data(ttl=600)
 def cargar_datos():
-    server = 'sql1001.site4now.net'
-    user = 'db_ab6a61_sgreengold_admin'
-    password = 'nR8A*aCh'
-    database = 'db_ab6a61_sgreengold'
+    server = st.secrets["DB_SERVER"]
+    user = st.secrets["DB_USER"]
+    password = st.secrets["DB_PASSWORD"]
+    database = st.secrets["DB_NAME"]
 
     try:
         conn = pymssql.connect(server, user, password, database)
